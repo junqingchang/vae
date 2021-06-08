@@ -16,7 +16,7 @@ BATCH_SIZE = 100
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
-        self.fc1 = nn.Linear(1*28*28, 400)
+        self.fc1 = nn.Linear(3*32*32, 400)
         self.fc2 = nn.Linear(400, 400)
         self.fc_mu = nn.Linear(400, 200)
         self.fc_var = nn.Linear(400, 200)
@@ -34,7 +34,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.fc1 = nn.Linear(200, 400)
         self.fc2 = nn.Linear(400, 400)
-        self.fc3 = nn.Linear(400, 1*28*28)
+        self.fc3 = nn.Linear(400, 3*32*32)
         self.relu = nn.LeakyReLU(0.2)
         self.sigmoid = nn.Sigmoid()
 
@@ -53,13 +53,12 @@ def train(trainloader, encoder, decoder, enc_optimizer, dec_optimizer, criterion
     kld_losses = 0
     for idx, (img, _) in enumerate(trainloader):
         img = img.to(device)
-        x = img.view((BATCH_SIZE, 1*28*28))
+        x = img.view((BATCH_SIZE, 3*32*32))
         enc_optimizer.zero_grad()
         dec_optimizer.zero_grad()
         mu, log_var = encoder(x)
         z = sample_z(mu, torch.exp(0.5 * log_var))
         recon_x = decoder(z)
-
         loss, recon_loss, kld = criterion(x, recon_x, mu, log_var)
         losses += loss.item()
         recon_losses += recon_loss.item()
@@ -88,20 +87,20 @@ def sample_recon(trainloader, encoder, decoder, epoch, device):
     grid = torchvision.utils.make_grid(img)
     writer.add_image('images', grid, epoch)
     img = img.to(device)
-    x = img.view((8, 1*28*28))
+    x = img.view((8, 3*32*32))
     with torch.no_grad():
         mu, log_var = encoder(x)
         z = sample_z(mu, torch.exp(0.5 * log_var))
         recon_x = decoder(z)
-        recon_img = recon_x.view((8, 1, 28, 28))
+        recon_img = recon_x.view((8, 3, 32, 32))
     recon_grid = torchvision.utils.make_grid(recon_img.cpu().detach())
     writer.add_image('recon_images', recon_grid, epoch)
 
 if __name__ == '__main__':
     transform = torchvision.transforms.ToTensor()
-    trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
     trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True)
-    testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
     testloader= DataLoader(testset, batch_size=8, shuffle=False)
 
     writer = SummaryWriter()
